@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>317479041154-kb15f48hkc1hp74bf4k7hpnd2f3j4hfn.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.317479041154-kb15f48hkc1hp74bf4k7hpnd2f3j4hfn</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDw2lyPrJqMVmxxAqy_M1epeBDMj9bUKPg</string>
+	<key>GCM_SENDER_ID</key>
+	<string>317479041154</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.tcc.teaneckcreekconservancy</string>
+	<key>PROJECT_ID</key>
+	<string>teaneck-creek-conservancy</string>
+	<key>STORAGE_BUCKET</key>
+	<string>teaneck-creek-conservancy.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:317479041154:ios:42e6f5960203a068ce9c9b</string>
+</dict>
+</plist>
