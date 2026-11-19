@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "ios": {
+      "bundleIdentifier": "com.tcc.teaneckcreekconservancy",
+      "googleServicesFile": "./GoogleService-Info.plist"
+    },
+    "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin"
+    ]
+  },
+  "name": "Teaneck Creek Conservancy",
+  "version": "1.0.0",
+  "scripts": {},
+  "dependencies": {
+    "expo": "~58.0.26",
+    "react": "19.3.0",
+    "react-native": "0.88.1"
+  }
+}

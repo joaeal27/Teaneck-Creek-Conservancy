@@ -1,13 +1,8 @@
 {
-  "expo": {
-    "ios": {
-      "bundleIdentifier": "com.tcc.teaneckcreekconservancy",
-      "googleServicesFile": "./GoogleService-Info.plist"
-    },
-    "plugins": [
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      "@react-native-google-signin/google-signin"
-    ]
+  "android": {
+    "package": "com.anonymous.teaneckcreekconservancy"
+  },
+  "ios": {
+    "bundleIdentifier": "com.anonymous.teaneckcreekconservancy"
   }
 }
