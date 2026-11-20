@@ -11,7 +11,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import auth from '@react-native-firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from '@react-native-firebase/auth';
+
+const firebaseAuth = getAuth();
 
 function getAuthErrorMessage(code) {
   const messages = {
@@ -36,7 +44,10 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => auth().onAuthStateChanged(setUser), []);
+  useEffect(
+    () => onAuthStateChanged(firebaseAuth, setUser),
+    [],
+  );
 
   async function handleSubmit() {
     setErrorMessage('');
@@ -50,9 +61,9 @@ export default function App() {
     setIsSubmitting(true);
     try {
       if (isCreatingAccount) {
-        await auth().createUserWithEmailAndPassword(trimmedEmail, password);
+        await createUserWithEmailAndPassword(firebaseAuth, trimmedEmail, password);
       } else {
-        await auth().signInWithEmailAndPassword(trimmedEmail, password);
+        await signInWithEmailAndPassword(firebaseAuth, trimmedEmail, password);
       }
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error?.code));
@@ -64,7 +75,7 @@ export default function App() {
   async function handleSignOut() {
     setErrorMessage('');
     try {
-      await auth().signOut();
+      await signOut(firebaseAuth);
     } catch {
       setErrorMessage('Could not sign out. Please try again.');
     }
@@ -75,7 +86,7 @@ export default function App() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <Text style={styles.brand}>TEANECK CREEK CONSERVANCY</Text>
-          <Text style={styles.title}>You’re signed in</Text>
+          <Text style={styles.title}>You are signed in</Text>
           <Text style={styles.subtitle}>{user.email}</Text>
           {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
           <Pressable style={styles.secondaryButton} onPress={handleSignOut}>
