@@ -14,12 +14,33 @@ import {
 import {
   createUserWithEmailAndPassword,
   getAuth,
+  getIdToken,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
 } from '@react-native-firebase/auth';
 
 const firebaseAuth = getAuth();
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+async function requestApi(user, path, options = {}) {
+  const token = await getIdToken(user);
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers,
+    },
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error ?? 'The request could not be completed.');
+  }
+
+  return result;
+}
 
 function getAuthErrorMessage(code) {
   const messages = {
@@ -43,11 +64,42 @@ export default function App() {
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [trails, setTrails] = useState([]);
+  const [trailName, setTrailName] = useState('');
+  const [trailDescription, setTrailDescription] = useState('');
+  const [isLoadingTrails, setIsLoadingTrails] = useState(false);
+  const [isSavingTrail, setIsSavingTrail] = useState(false);
+  const [trailError, setTrailError] = useState('');
 
   useEffect(
     () => onAuthStateChanged(firebaseAuth, setUser),
     [],
   );
+
+  useEffect(() => {
+    if (!user) {
+      setTrails([]);
+      return;
+    }
+
+    let isCurrent = true;
+    setIsLoadingTrails(true);
+    setTrailError('');
+    requestApi(user, '/api/trails')
+      .then((result) => {
+        if (isCurrent) setTrails(result.trails);
+      })
+      .catch((error) => {
+        if (isCurrent) setTrailError(error.message);
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingTrails(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [user]);
 
   async function handleSubmit() {
     setErrorMessage('');
@@ -81,18 +133,92 @@ export default function App() {
     }
   }
 
+  async function handleCreateTrail() {
+    setTrailError('');
+    setIsSavingTrail(true);
+    try {
+      const result = await requestApi(user, '/api/trails', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: trailName.trim(),
+          description: trailDescription.trim() || null,
+        }),
+      });
+      setTrails((current) => [result.trail, ...current]);
+      setTrailName('');
+      setTrailDescription('');
+    } catch (error) {
+      setTrailError(error.message);
+    } finally {
+      setIsSavingTrail(false);
+    }
+  }
+
   if (user) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          <Text style={styles.brand}>TEANECK CREEK CONSERVANCY</Text>
-          <Text style={styles.title}>You are signed in</Text>
-          <Text style={styles.subtitle}>{user.email}</Text>
-          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-          <Pressable style={styles.secondaryButton} onPress={handleSignOut}>
-            <Text style={styles.secondaryButtonText}>Sign out</Text>
-          </Pressable>
-        </View>
+        <ScrollView contentContainerStyle={styles.dashboardContent}>
+          <View style={styles.content}>
+            <Text style={styles.brand}>TEANECK CREEK CONSERVANCY</Text>
+            <Text style={styles.title}>Trail directory</Text>
+            <Text style={styles.subtitle}>Signed in as {user.email}</Text>
+
+            <Text style={styles.sectionTitle}>Add a trail</Text>
+            <TextInput
+              onChangeText={setTrailName}
+              placeholder="Trail name"
+              placeholderTextColor="#7B8A7F"
+              style={styles.input}
+              value={trailName}
+            />
+            <TextInput
+              onChangeText={setTrailDescription}
+              placeholder="Description (optional)"
+              placeholderTextColor="#7B8A7F"
+              style={styles.input}
+              value={trailDescription}
+            />
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSavingTrail || !trailName.trim()}
+              onPress={handleCreateTrail}
+              style={[
+                styles.primaryButton,
+                (isSavingTrail || !trailName.trim()) && styles.disabledButton,
+              ]}
+            >
+              {isSavingTrail ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : null}
+              {!isSavingTrail ? (
+                <Text style={styles.primaryButtonText}>Save trail</Text>
+              ) : null}
+            </Pressable>
+
+            <Text style={styles.sectionTitle}>Trails</Text>
+            {trailError ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {trailError}
+              </Text>
+            ) : null}
+            {isLoadingTrails ? <ActivityIndicator color="#286343" /> : null}
+            {!isLoadingTrails && trails.length === 0 && !trailError ? (
+              <Text style={styles.trailDescription}>No trails have been added yet.</Text>
+            ) : null}
+            {trails.map((trail) => (
+              <View key={trail.id} style={styles.trailCard}>
+                <Text style={styles.trailName}>{trail.name}</Text>
+                {trail.description ? (
+                  <Text style={styles.trailDescription}>{trail.description}</Text>
+                ) : null}
+              </View>
+            ))}
+            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+            <Pressable style={styles.secondaryButton} onPress={handleSignOut}>
+              <Text style={styles.secondaryButtonText}>Sign out</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -202,6 +328,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 36,
   },
+  dashboardContent: {
+    flexGrow: 1,
+    paddingVertical: 36,
+  },
   content: {
     alignSelf: 'center',
     maxWidth: 480,
@@ -225,6 +355,31 @@ const styles = StyleSheet.create({
     color: '#53665A',
     fontSize: 16,
     marginBottom: 30,
+  },
+  sectionTitle: {
+    color: '#183B2A',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 14,
+    marginTop: 16,
+  },
+  trailCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#D5DED5',
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 16,
+  },
+  trailName: {
+    color: '#183B2A',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  trailDescription: {
+    color: '#53665A',
+    fontSize: 14,
+    marginTop: 6,
   },
   label: {
     color: '#263D30',
