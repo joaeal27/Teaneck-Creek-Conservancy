@@ -27,8 +27,19 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>com.anonymous.teaneckcreekconservancy</string>
+          <string>com.tcc.teaneckcreekconservancy</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
           <string>com.googleusercontent.apps.317479041154-kb15f48hkc1hp74bf4k7hpnd2f3j4hfn</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>app-1-317479041154-ios-42e6f5960203a068ce9c9b</string>
         </array>
       </dict>
     </array>

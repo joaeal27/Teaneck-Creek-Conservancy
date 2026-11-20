@@ -3,6 +3,11 @@
     "package": "com.anonymous.teaneckcreekconservancy"
   },
   "ios": {
-    "bundleIdentifier": "com.anonymous.teaneckcreekconservancy"
-  }
+    "bundleIdentifier": "com.tcc.teaneckcreekconservancy",
+    "googleServicesFile": "./GoogleService-Info.plist"
+  },
+  "plugins": [
+    "@react-native-firebase/app",
+    "@react-native-firebase/auth"
+  ]
 }
