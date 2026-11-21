@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as SQLite from 'expo-sqlite';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,6 +23,7 @@ import {
 
 const firebaseAuth = getAuth();
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+let showcaseDatabase;
 
 async function requestApi(path, options = {}, user = null) {
   const token = user ? await getIdToken(user) : null;
@@ -40,6 +42,28 @@ async function requestApi(path, options = {}, user = null) {
   }
 
   return result;
+}
+
+async function getSQLiteShowcaseTrails() {
+  if (!showcaseDatabase) {
+    showcaseDatabase = await SQLite.openDatabaseAsync('tcc-showcase.db');
+  }
+
+  await showcaseDatabase.execAsync(`
+    CREATE TABLE IF NOT EXISTS showcase_trails (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT
+    );
+    INSERT OR IGNORE INTO showcase_trails (id, name, description)
+    VALUES
+      (1, 'Overpeck Creek Trail', 'A sample trail saved on this device.'),
+      (2, 'Forest Edge Walk', 'SQLite keeps this demo data available offline.');
+  `);
+
+  return showcaseDatabase.getAllAsync(
+    'SELECT id, name, description FROM showcase_trails ORDER BY id',
+  );
 }
 
 function getAuthErrorMessage(code) {
@@ -74,6 +98,10 @@ export default function App() {
   const [isLoadingShowcase, setIsLoadingShowcase] = useState(false);
   const [showcaseTrails, setShowcaseTrails] = useState([]);
   const [showcaseError, setShowcaseError] = useState('');
+  const [isSQLiteShowcaseVisible, setIsSQLiteShowcaseVisible] = useState(false);
+  const [isLoadingSQLiteShowcase, setIsLoadingSQLiteShowcase] = useState(false);
+  const [sqliteTrails, setSQLiteTrails] = useState([]);
+  const [sqliteError, setSQLiteError] = useState('');
 
   useEffect(
     () => onAuthStateChanged(firebaseAuth, setUser),
@@ -153,6 +181,25 @@ export default function App() {
       setShowcaseError(error.message);
     } finally {
       setIsLoadingShowcase(false);
+    }
+  }
+
+  async function handleSQLiteShowcasePress() {
+    if (isSQLiteShowcaseVisible) {
+      setIsSQLiteShowcaseVisible(false);
+      return;
+    }
+
+    setIsSQLiteShowcaseVisible(true);
+    setIsLoadingSQLiteShowcase(true);
+    setSQLiteError('');
+    try {
+      const result = await getSQLiteShowcaseTrails();
+      setSQLiteTrails(result);
+    } catch (error) {
+      setSQLiteError(error.message);
+    } finally {
+      setIsLoadingSQLiteShowcase(false);
     }
   }
 
@@ -366,6 +413,46 @@ export default function App() {
               ) : null}
               {isShowcaseVisible
                 ? showcaseTrails.map((trail) => (
+                    <View key={trail.id} style={styles.trailCard}>
+                      <Text style={styles.trailName}>{trail.name}</Text>
+                      {trail.description ? (
+                        <Text style={styles.trailDescription}>{trail.description}</Text>
+                      ) : null}
+                    </View>
+                  ))
+                : null}
+              <Text style={styles.trailDescription}>
+                View sample trails stored locally in SQLite. They are available offline on this device.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isLoadingSQLiteShowcase}
+                onPress={handleSQLiteShowcasePress}
+                style={[
+                  styles.secondaryButton,
+                  isLoadingSQLiteShowcase && styles.disabledButton,
+                ]}
+              >
+                {isLoadingSQLiteShowcase ? (
+                  <ActivityIndicator color="#286343" />
+                ) : (
+                  <Text style={styles.secondaryButtonText}>
+                    {isSQLiteShowcaseVisible ? 'Hide SQLite trails' : 'Show SQLite trails'}
+                  </Text>
+                )}
+              </Pressable>
+              {sqliteError ? (
+                <Text accessibilityRole="alert" style={styles.error}>
+                  {sqliteError}
+                </Text>
+              ) : null}
+              {isSQLiteShowcaseVisible && !isLoadingSQLiteShowcase && sqliteTrails.length === 0 && !sqliteError ? (
+                <Text style={styles.emptyState}>
+                  SQLite is ready, but there are no sample trails yet.
+                </Text>
+              ) : null}
+              {isSQLiteShowcaseVisible
+                ? sqliteTrails.map((trail) => (
                     <View key={trail.id} style={styles.trailCard}>
                       <Text style={styles.trailName}>{trail.name}</Text>
                       {trail.description ? (

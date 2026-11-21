@@ -75,6 +75,8 @@ PODS:
   - ExpoModulesWorklets (58.1.0):
     - ExpoModulesCore
     - ExpoModulesJSI
+  - ExpoSQLite (58.0.18):
+    - ExpoModulesCore
   - fast_float (8.0.0):
     - ReactNativeDependencies
   - FBLazyVector (0.88.1):
@@ -1879,6 +1881,7 @@ DEPENDENCIES:
   - ExpoModulesCore (from `../node_modules/expo-modules-core/ExpoModulesCore.podspec`)
   - ExpoModulesJSI (from `../node_modules/expo-modules-jsi/apple`)
   - ExpoModulesWorklets (from `../node_modules/expo-modules-core/ExpoModulesWorklets.podspec`)
+  - ExpoSQLite (from `../node_modules/expo-sqlite/ios`)
   - fast_float (from `build/rndeps-facades/fast_float`)
   - FBLazyVector (from `build/rncore-facades/FBLazyVector`)
   - fmt (from `build/rndeps-facades/fmt`)
@@ -1994,6 +1997,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-jsi/apple"
   ExpoModulesWorklets:
     :podspec: "../node_modules/expo-modules-core/ExpoModulesWorklets.podspec"
+  ExpoSQLite:
+    :path: "../node_modules/expo-sqlite/ios"
   fast_float:
     :path: build/rndeps-facades/fast_float
   FBLazyVector:
@@ -2182,6 +2187,7 @@ SPEC CHECKSUMS:
   ExpoModulesCore: 330969c46aeb5a89ebd916e70bf2e8cec7a2d77d
   ExpoModulesJSI: 038febce313f317add1a7354a4fb97953662a12b
   ExpoModulesWorklets: 03d171c0296cdffc054e9570e9393a7655ef360d
+  ExpoSQLite: 8f41cff76b3499df037e77bf88b9ad97e4794282
   fast_float: 7c925d1cebf8328d4018d061f49377e9f887e3b4
   FBLazyVector: 07cb4c5b92110c132f2bb73b908e87f35cbe0a19
   fmt: ba0886e864ebb21d14c98b2e12e164b8002f5b93
