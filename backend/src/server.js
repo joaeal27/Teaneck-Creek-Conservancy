@@ -4,18 +4,18 @@ import { getAuth } from 'firebase-admin/auth';
 import { PrismaClient } from '@prisma/client';
 import express from 'express';
 
-for (const name of ['DATABASE_URL', 'GOOGLE_APPLICATION_CREDENTIALS']) {
-  if (!process.env[name]) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
+if (!process.env.DATABASE_URL) {
+  throw new Error('Missing required environment variable: DATABASE_URL');
 }
 
-const firebaseApp =
-  getApps()[0] ??
-  initializeApp({
-    credential: applicationDefault(),
-  });
-const firebaseAuth = getAuth(firebaseApp);
+const firebaseAuth = process.env.GOOGLE_APPLICATION_CREDENTIALS
+  ? getAuth(
+      getApps()[0] ??
+        initializeApp({
+          credential: applicationDefault(),
+        }),
+    )
+  : null;
 const prisma = new PrismaClient();
 const app = express();
 
@@ -26,6 +26,11 @@ app.get('/health', (_request, response) => {
 });
 
 async function requireFirebaseUser(request, response, next) {
+  if (!firebaseAuth) {
+    response.status(503).json({ error: 'Firebase authentication is not configured.' });
+    return;
+  }
+
   const authorization = request.get('authorization');
   const [scheme, token] = authorization?.split(' ') ?? [];
 
@@ -43,7 +48,7 @@ async function requireFirebaseUser(request, response, next) {
   }
 }
 
-app.get('/api/trails', requireFirebaseUser, async (_request, response) => {
+app.get('/api/trails', async (_request, response) => {
   try {
     const trails = await prisma.trail.findMany({
       orderBy: { createdAt: 'desc' },

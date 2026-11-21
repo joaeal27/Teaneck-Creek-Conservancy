@@ -16,4 +16,4 @@ The mobile app talks to PostgreSQL through the Express API in `backend/`; it doe
 5. In the project root, copy `.env.example` to `.env`. For the iOS Simulator, set `EXPO_PUBLIC_API_URL=http://localhost:3000`; use your computer's LAN IP when testing on a physical phone.
 6. Restart Expo with `npx expo start --dev-client`.
 
-The signed-in screen lists trails and lets authenticated users add one. The API verifies Firebase ID tokens before reading or writing trails. For a database that already has tables, update `backend/prisma/schema.prisma` to match them before running a migration.
+The login screen has a public, read-only trail showcase that loads from PostgreSQL without Firebase sign-in. Trail creation still requires a valid Firebase ID token; the API verifies it before writing. Only publish trail names and descriptions that are intended to be public. For a database that already has tables, update `backend/prisma/schema.prisma` to match them before running a migration.

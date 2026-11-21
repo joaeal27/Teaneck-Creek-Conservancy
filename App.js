@@ -23,12 +23,12 @@ import {
 const firebaseAuth = getAuth();
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-async function requestApi(user, path, options = {}) {
-  const token = await getIdToken(user);
+async function requestApi(path, options = {}, user = null) {
+  const token = user ? await getIdToken(user) : null;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
     },
@@ -70,6 +70,10 @@ export default function App() {
   const [isLoadingTrails, setIsLoadingTrails] = useState(false);
   const [isSavingTrail, setIsSavingTrail] = useState(false);
   const [trailError, setTrailError] = useState('');
+  const [isShowcaseVisible, setIsShowcaseVisible] = useState(false);
+  const [isLoadingShowcase, setIsLoadingShowcase] = useState(false);
+  const [showcaseTrails, setShowcaseTrails] = useState([]);
+  const [showcaseError, setShowcaseError] = useState('');
 
   useEffect(
     () => onAuthStateChanged(firebaseAuth, setUser),
@@ -85,7 +89,7 @@ export default function App() {
     let isCurrent = true;
     setIsLoadingTrails(true);
     setTrailError('');
-    requestApi(user, '/api/trails')
+    requestApi('/api/trails', {}, user)
       .then((result) => {
         if (isCurrent) setTrails(result.trails);
       })
@@ -133,17 +137,36 @@ export default function App() {
     }
   }
 
+  async function handleShowcasePress() {
+    if (isShowcaseVisible) {
+      setIsShowcaseVisible(false);
+      return;
+    }
+
+    setIsShowcaseVisible(true);
+    setIsLoadingShowcase(true);
+    setShowcaseError('');
+    try {
+      const result = await requestApi('/api/trails');
+      setShowcaseTrails(result.trails);
+    } catch (error) {
+      setShowcaseError(error.message);
+    } finally {
+      setIsLoadingShowcase(false);
+    }
+  }
+
   async function handleCreateTrail() {
     setTrailError('');
     setIsSavingTrail(true);
     try {
-      const result = await requestApi(user, '/api/trails', {
+      const result = await requestApi('/api/trails', {
         method: 'POST',
         body: JSON.stringify({
           name: trailName.trim(),
           description: trailDescription.trim() || null,
         }),
-      });
+      }, user);
       setTrails((current) => [result.trail, ...current]);
       setTrailName('');
       setTrailDescription('');
@@ -308,6 +331,50 @@ export default function App() {
                   : 'New here? Create an account'}
               </Text>
             </Pressable>
+
+            <View style={styles.showcase}>
+              <Text style={styles.sectionTitle}>Explore the database</Text>
+              <Text style={styles.trailDescription}>
+                Browse trail records stored in PostgreSQL. This directory is public and read-only.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isLoadingShowcase}
+                onPress={handleShowcasePress}
+                style={[
+                  styles.secondaryButton,
+                  isLoadingShowcase && styles.disabledButton,
+                ]}
+              >
+                {isLoadingShowcase ? (
+                  <ActivityIndicator color="#286343" />
+                ) : (
+                  <Text style={styles.secondaryButtonText}>
+                    {isShowcaseVisible ? 'Hide trails' : 'Show PostgreSQL trails'}
+                  </Text>
+                )}
+              </Pressable>
+              {showcaseError ? (
+                <Text accessibilityRole="alert" style={styles.error}>
+                  {showcaseError}
+                </Text>
+              ) : null}
+              {isShowcaseVisible && !isLoadingShowcase && showcaseTrails.length === 0 && !showcaseError ? (
+                <Text style={styles.emptyState}>
+                  PostgreSQL is connected, but there are no trail records yet.
+                </Text>
+              ) : null}
+              {isShowcaseVisible
+                ? showcaseTrails.map((trail) => (
+                    <View key={trail.id} style={styles.trailCard}>
+                      <Text style={styles.trailName}>{trail.name}</Text>
+                      {trail.description ? (
+                        <Text style={styles.trailDescription}>{trail.description}</Text>
+                      ) : null}
+                    </View>
+                  ))
+                : null}
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -361,6 +428,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 14,
+    marginTop: 16,
+  },
+  showcase: {
+    borderTopColor: '#D5DED5',
+    borderTopWidth: 1,
+    marginTop: 16,
+    paddingTop: 10,
+  },
+  emptyState: {
+    color: '#53665A',
+    fontSize: 14,
     marginTop: 16,
   },
   trailCard: {
