@@ -17,6 +17,11 @@ OrbStack runs the local Supabase containers. The Supabase stack provides Postgre
 6. In the project root, copy `.env.example` to `.env`. For the iOS Simulator, set `EXPO_PUBLIC_API_URL=http://localhost:3000`; use your computer's LAN IP when testing on a physical phone.
 7. Restart Expo with `npx expo start --dev-client`.
 
+MapLibre React Native is installed for map views. After changing native dependencies, rebuild the development client:
+
+- iOS: `npx expo run:ios`
+- Android: `npx expo run:android`
+
 Use `supabase status` to see the local service URLs and keys. Keep service-role keys on the backend; never put them in Expo `EXPO_PUBLIC_*` variables. The private Storage bucket is configured but does not have an upload UI yet.
 If you run `supabase db reset`, re-run `cd backend && npm run db:migrate:deploy` to restore the Prisma-managed trail table.
 

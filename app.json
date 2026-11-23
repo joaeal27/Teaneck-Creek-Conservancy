@@ -9,6 +9,7 @@
   "plugins": [
     "@react-native-firebase/app",
     "@react-native-firebase/auth",
-    "expo-sqlite"
+    "expo-sqlite",
+    "@maplibre/maplibre-react-native"
   ]
 }

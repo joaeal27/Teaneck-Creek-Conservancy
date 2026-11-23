@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as SQLite from 'expo-sqlite';
+import { Camera, Map } from '@maplibre/maplibre-react-native';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -24,6 +25,21 @@ import {
 const firebaseAuth = getAuth();
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 let showcaseDatabase;
+
+function TrailMap() {
+  return (
+    <View style={styles.mapContainer}>
+      <Map
+        mapStyle="https://tiles.openfreemap.org/styles/liberty"
+      >
+        <Camera
+          centerCoordinate={[-74.0147, 40.8979]}
+          zoomLevel={13}
+        />
+      </Map>
+    </View>
+  );
+}
 
 async function requestApi(path, options = {}, user = null) {
   const token = user ? await getIdToken(user) : null;
@@ -232,6 +248,8 @@ export default function App() {
             <Text style={styles.brand}>TEANECK CREEK CONSERVANCY</Text>
             <Text style={styles.title}>Trail directory</Text>
             <Text style={styles.subtitle}>Signed in as {user.email}</Text>
+            <Text style={styles.sectionTitle}>Map</Text>
+            <TrailMap />
 
             <Text style={styles.sectionTitle}>Add a trail</Text>
             <TextInput
@@ -313,6 +331,8 @@ export default function App() {
                 ? 'Sign up to continue.'
                 : 'Sign in to continue to your account.'}
             </Text>
+            <Text style={styles.sectionTitle}>Explore Teaneck Creek</Text>
+            <TrailMap />
 
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -522,6 +542,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     marginTop: 16,
     paddingTop: 10,
+  },
+  mapContainer: {
+    borderColor: '#D5DED5',
+    borderRadius: 10,
+    borderWidth: 1,
+    height: 280,
+    marginBottom: 18,
+    overflow: 'hidden',
   },
   emptyState: {
     color: '#53665A',
