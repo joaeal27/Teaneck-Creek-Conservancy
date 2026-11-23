@@ -17,6 +17,8 @@ OrbStack runs the local Supabase containers. The Supabase stack provides Postgre
 6. In the project root, copy `.env.example` to `.env`. For the iOS Simulator, set `EXPO_PUBLIC_API_URL=http://localhost:3000`; use your computer's LAN IP when testing on a physical phone.
 7. Restart Expo with `npx expo start --dev-client`.
 
+For trail image uploads, set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `backend/.env`. Both values are backend-only secrets; never place the service-role key in `EXPO_PUBLIC_*` variables. Images are stored privately in the `trail-photos` bucket and returned through short-lived signed URLs.
+
 MapLibre React Native is installed for map views. After changing native dependencies, rebuild the development client:
 
 - iOS: `npx expo run:ios`

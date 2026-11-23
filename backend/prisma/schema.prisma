@@ -11,6 +11,7 @@ model Trail {
   id          String   @id @default(uuid()) @db.Uuid
   name        String   @db.VarChar(120)
   description String?  @db.Text
+  photoPath   String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

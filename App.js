@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import * as SQLite from 'expo-sqlite';
+import * as ImagePicker from 'expo-image-picker';
 import { Camera, Map } from '@maplibre/maplibre-react-native';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -107,6 +109,7 @@ export default function App() {
   const [trails, setTrails] = useState([]);
   const [trailName, setTrailName] = useState('');
   const [trailDescription, setTrailDescription] = useState('');
+  const [trailPhoto, setTrailPhoto] = useState(null);
   const [isLoadingTrails, setIsLoadingTrails] = useState(false);
   const [isSavingTrail, setIsSavingTrail] = useState(false);
   const [trailError, setTrailError] = useState('');
@@ -219,6 +222,41 @@ export default function App() {
     }
   }
 
+  async function handleChoosePhoto() {
+    setTrailError('');
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setTrailError('Photo library permission is required.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      setTrailError('This photo could not be read.');
+      return;
+    }
+    if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+      setTrailError('Photo must be no larger than 10 MB.');
+      return;
+    }
+
+    setTrailPhoto({
+      base64: asset.base64,
+      mimeType: asset.mimeType ?? 'image/jpeg',
+    });
+  }
+
   async function handleCreateTrail() {
     setTrailError('');
     setIsSavingTrail(true);
@@ -228,11 +266,13 @@ export default function App() {
         body: JSON.stringify({
           name: trailName.trim(),
           description: trailDescription.trim() || null,
+          photo: trailPhoto,
         }),
       }, user);
       setTrails((current) => [result.trail, ...current]);
       setTrailName('');
       setTrailDescription('');
+      setTrailPhoto(null);
     } catch (error) {
       setTrailError(error.message);
     } finally {
@@ -266,6 +306,22 @@ export default function App() {
               style={styles.input}
               value={trailDescription}
             />
+            {trailPhoto ? (
+              <Image
+                accessibilityLabel="Selected trail photo"
+                source={{ uri: `data:${trailPhoto.mimeType};base64,${trailPhoto.base64}` }}
+                style={styles.trailPhotoPreview}
+              />
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleChoosePhoto}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>
+                {trailPhoto ? 'Change photo' : 'Choose photo'}
+              </Text>
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               disabled={isSavingTrail || !trailName.trim()}
@@ -295,6 +351,9 @@ export default function App() {
             ) : null}
             {trails.map((trail) => (
               <View key={trail.id} style={styles.trailCard}>
+                {trail.photoUrl ? (
+                  <Image source={{ uri: trail.photoUrl }} style={styles.trailPhoto} />
+                ) : null}
                 <Text style={styles.trailName}>{trail.name}</Text>
                 {trail.description ? (
                   <Text style={styles.trailDescription}>{trail.description}</Text>
@@ -434,6 +493,9 @@ export default function App() {
               {isShowcaseVisible
                 ? showcaseTrails.map((trail) => (
                     <View key={trail.id} style={styles.trailCard}>
+                      {trail.photoUrl ? (
+                        <Image source={{ uri: trail.photoUrl }} style={styles.trailPhoto} />
+                      ) : null}
                       <Text style={styles.trailName}>{trail.name}</Text>
                       {trail.description ? (
                         <Text style={styles.trailDescription}>{trail.description}</Text>
@@ -555,6 +617,20 @@ const styles = StyleSheet.create({
     color: '#53665A',
     fontSize: 14,
     marginTop: 16,
+  },
+  trailPhotoPreview: {
+    borderRadius: 10,
+    height: 220,
+    marginBottom: 8,
+    resizeMode: 'cover',
+    width: '100%',
+  },
+  trailPhoto: {
+    borderRadius: 8,
+    height: 180,
+    marginBottom: 10,
+    resizeMode: 'cover',
+    width: '100%',
   },
   trailCard: {
     backgroundColor: '#FFFFFF',

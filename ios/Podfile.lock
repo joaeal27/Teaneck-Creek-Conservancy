@@ -40,6 +40,8 @@ PODS:
     - ExpoModulesCore
   - ExpoFont (58.0.12):
     - ExpoModulesCore
+  - ExpoImagePicker (58.0.10):
+    - ExpoModulesCore
   - ExpoKeepAwake (58.0.4):
     - ExpoModulesCore
   - ExpoLogBox (58.0.15):
@@ -1899,6 +1901,7 @@ DEPENDENCIES:
   - "ExpoDomWebView (from `../node_modules/@expo/dom-webview/ios`)"
   - ExpoFileSystem (from `../node_modules/expo/node_modules/expo-file-system/ios/ExpoFileSystem.podspec`)
   - ExpoFont (from `../node_modules/expo-font/ios/ExpoFont.podspec`)
+  - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../node_modules/expo/node_modules/expo-keep-awake/ios`)
   - "ExpoLogBox (from `../node_modules/@expo/log-box`)"
   - ExpoModulesCore (from `../node_modules/expo-modules-core/ExpoModulesCore.podspec`)
@@ -2011,6 +2014,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/expo/node_modules/expo-file-system/ios/ExpoFileSystem.podspec"
   ExpoFont:
     :podspec: "../node_modules/expo-font/ios/ExpoFont.podspec"
+  ExpoImagePicker:
+    :path: "../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
     :path: "../node_modules/expo/node_modules/expo-keep-awake/ios"
   ExpoLogBox:
@@ -2208,6 +2213,7 @@ SPEC CHECKSUMS:
   ExpoDomWebView: b2a6d681b9d34c23b1f584321386ca8da1d36afb
   ExpoFileSystem: 3f4f423755d1ed5ef084caeb3a62c4a3fca0bf12
   ExpoFont: daea737a2e3742f9a946f2884518e70dd37011f3
+  ExpoImagePicker: a466134ec92fed0b38bbf9062c7eb5f3c8c49d94
   ExpoKeepAwake: 3dc7cce59bdc13796f772ac54d3af1ca6b6954cd
   ExpoLogBox: 9bfba7bb99c806b678703e6c62323f3c4785e706
   ExpoModulesCore: 330969c46aeb5a89ebd916e70bf2e8cec7a2d77d
@@ -2302,6 +2308,6 @@ SPEC CHECKSUMS:
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: 991c2efbedba484db5b1715dd13a75dde02da22f
+PODFILE CHECKSUM: 05d757058dc28251796ee572183867dee8f36902
 
 COCOAPODS: 1.17.0

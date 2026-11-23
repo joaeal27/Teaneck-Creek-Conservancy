@@ -1,0 +1,2 @@
+ALTER TABLE "Trail"
+ADD COLUMN "photoPath" TEXT;

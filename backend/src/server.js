@@ -3,6 +3,8 @@ import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { PrismaClient } from '@prisma/client';
 import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'node:crypto';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('Missing required environment variable: DATABASE_URL');
@@ -17,9 +19,13 @@ const firebaseAuth = process.env.GOOGLE_APPLICATION_CREDENTIALS
     )
   : null;
 const prisma = new PrismaClient();
+const supabase =
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null;
 const app = express();
 
-app.use(express.json({ limit: '16kb' }));
+app.use(express.json({ limit: '16mb' }));
 
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' });
@@ -53,7 +59,20 @@ app.get('/api/trails', async (_request, response) => {
     const trails = await prisma.trail.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    response.json({ trails });
+    const trailsWithPhotos = await Promise.all(
+      trails.map(async (trail) => {
+        if (!trail.photoPath || !supabase) {
+          return { ...trail, photoUrl: null };
+        }
+
+        const { data, error } = await supabase.storage
+          .from('trail-photos')
+          .createSignedUrl(trail.photoPath, 60 * 60);
+
+        return { ...trail, photoUrl: error ? null : data.signedUrl };
+      }),
+    );
+    response.json({ trails: trailsWithPhotos });
   } catch (error) {
     console.error('Failed to load trails:', error);
     response.status(500).json({ error: 'Unable to load trails.' });
@@ -61,7 +80,7 @@ app.get('/api/trails', async (_request, response) => {
 });
 
 app.post('/api/trails', requireFirebaseUser, async (request, response) => {
-  const { name, description } = request.body ?? {};
+  const { name, description, photo } = request.body ?? {};
 
   if (typeof name !== 'string' || name.trim().length === 0 || name.trim().length > 120) {
     response.status(400).json({ error: 'Trail name must be between 1 and 120 characters.' });
@@ -73,14 +92,65 @@ app.post('/api/trails', requireFirebaseUser, async (request, response) => {
     return;
   }
 
+  if (photo != null) {
+    if (
+      typeof photo.base64 !== 'string' ||
+      !['image/jpeg', 'image/png', 'image/webp'].includes(photo.mimeType)
+    ) {
+      response.status(400).json({ error: 'Photo must be a JPEG, PNG, or WebP image.' });
+      return;
+    }
+  }
+
+  if (!supabase) {
+    response.status(503).json({ error: 'Supabase image storage is not configured.' });
+    return;
+  }
+
   try {
+    let photoPath = null;
+
+    if (photo) {
+      const imageBuffer = Buffer.from(photo.base64, 'base64');
+      if (imageBuffer.length === 0 || imageBuffer.length > 10 * 1024 * 1024) {
+        response.status(400).json({ error: 'Photo must be no larger than 10 MB.' });
+        return;
+      }
+
+      const extension =
+        photo.mimeType === 'image/jpeg' ? 'jpg' :
+        photo.mimeType === 'image/png' ? 'png' : 'webp';
+      photoPath = `${request.user.uid}/${randomUUID()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('trail-photos')
+        .upload(photoPath, imageBuffer, {
+          contentType: photo.mimeType,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+    }
+
     const trail = await prisma.trail.create({
       data: {
         name: name.trim(),
         description: description?.trim() || null,
+        photoPath,
       },
     });
-    response.status(201).json({ trail });
+
+    let photoUrl = null;
+    if (photoPath) {
+      const { data } = await supabase.storage
+        .from('trail-photos')
+        .createSignedUrl(photoPath, 60 * 60);
+      photoUrl = data?.signedUrl ?? null;
+    }
+
+    response.status(201).json({ trail: { ...trail, photoUrl } });
   } catch (error) {
     console.error('Failed to create trail:', error);
     response.status(500).json({ error: 'Unable to save trail.' });
