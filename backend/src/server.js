@@ -2,8 +2,9 @@ import 'dotenv/config';
 import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { PrismaClient } from '@prisma/client';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
 
 if (!process.env.DATABASE_URL) {
@@ -19,9 +20,24 @@ const firebaseAuth = process.env.GOOGLE_APPLICATION_CREDENTIALS
     )
   : null;
 const prisma = new PrismaClient();
-const supabase =
-  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+const storageBucket = process.env.SUPABASE_S3_BUCKET ?? 'trail-photos';
+const s3 =
+  process.env.SUPABASE_S3_ENDPOINT &&
+  process.env.SUPABASE_S3_REGION &&
+  process.env.SUPABASE_S3_ACCESS_KEY_ID &&
+  process.env.SUPABASE_S3_SECRET_ACCESS_KEY
+    ? new S3Client({
+        endpoint: process.env.SUPABASE_S3_ENDPOINT,
+        region: process.env.SUPABASE_S3_REGION,
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.SUPABASE_S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.SUPABASE_S3_SECRET_ACCESS_KEY,
+          ...(process.env.SUPABASE_S3_SESSION_TOKEN
+            ? { sessionToken: process.env.SUPABASE_S3_SESSION_TOKEN }
+            : {}),
+        },
+      })
     : null;
 const app = express();
 
@@ -61,15 +77,19 @@ app.get('/api/trails', async (_request, response) => {
     });
     const trailsWithPhotos = await Promise.all(
       trails.map(async (trail) => {
-        if (!trail.photoPath || !supabase) {
+        if (!trail.photoPath || !s3) {
           return { ...trail, photoUrl: null };
         }
 
-        const { data, error } = await supabase.storage
-          .from('trail-photos')
-          .createSignedUrl(trail.photoPath, 60 * 60);
-
-        return { ...trail, photoUrl: error ? null : data.signedUrl };
+        const photoUrl = await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: storageBucket,
+            Key: trail.photoPath,
+          }),
+          { expiresIn: 60 * 60 },
+        );
+        return { ...trail, photoUrl };
       }),
     );
     response.json({ trails: trailsWithPhotos });
@@ -102,8 +122,8 @@ app.post('/api/trails', requireFirebaseUser, async (request, response) => {
     }
   }
 
-  if (!supabase) {
-    response.status(503).json({ error: 'Supabase image storage is not configured.' });
+  if (photo && !s3) {
+    response.status(503).json({ error: 'Supabase S3-compatible storage is not configured.' });
     return;
   }
 
@@ -122,16 +142,14 @@ app.post('/api/trails', requireFirebaseUser, async (request, response) => {
         photo.mimeType === 'image/png' ? 'png' : 'webp';
       photoPath = `${request.user.uid}/${randomUUID()}.${extension}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('trail-photos')
-        .upload(photoPath, imageBuffer, {
-          contentType: photo.mimeType,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: storageBucket,
+          Key: photoPath,
+          Body: imageBuffer,
+          ContentType: photo.mimeType,
+        }),
+      );
     }
 
     const trail = await prisma.trail.create({
@@ -144,10 +162,14 @@ app.post('/api/trails', requireFirebaseUser, async (request, response) => {
 
     let photoUrl = null;
     if (photoPath) {
-      const { data } = await supabase.storage
-        .from('trail-photos')
-        .createSignedUrl(photoPath, 60 * 60);
-      photoUrl = data?.signedUrl ?? null;
+      photoUrl = await getSignedUrl(
+        s3,
+        new GetObjectCommand({
+          Bucket: storageBucket,
+          Key: photoPath,
+        }),
+        { expiresIn: 60 * 60 },
+      );
     }
 
     response.status(201).json({ trail: { ...trail, photoUrl } });
