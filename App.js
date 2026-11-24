@@ -15,36 +15,56 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import {
-  createUserWithEmailAndPassword,
-  getAuth,
-  getIdToken,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-} from '@react-native-firebase/auth';
+import length from '@turf/length';
 
-const firebaseAuth = getAuth();
+const firebaseAuthEnabled = process.env.EXPO_PUBLIC_FIREBASE_ENABLED === 'true';
+const firebaseAuthModule = firebaseAuthEnabled
+  ? require('@react-native-firebase/auth')
+  : null;
+const firebaseAuth = firebaseAuthModule?.getAuth() ?? null;
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const sampleTrailLengthKm = length(
+  {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [-74.0147, 40.8979],
+        [-74.0118, 40.8996],
+        [-74.009, 40.901],
+      ],
+    },
+  },
+  { units: 'kilometers' },
+).toFixed(2);
 let showcaseDatabase;
 
 function TrailMap() {
   return (
-    <View style={styles.mapContainer}>
-      <Map
-        mapStyle="https://tiles.openfreemap.org/styles/liberty"
-      >
-        <Camera
-          centerCoordinate={[-74.0147, 40.8979]}
-          zoomLevel={13}
-        />
-      </Map>
-    </View>
+    <>
+      <View style={styles.mapContainer}>
+        <Map
+          mapStyle="https://tiles.openfreemap.org/styles/liberty"
+        >
+          <Camera
+            centerCoordinate={[-74.0147, 40.8979]}
+            zoomLevel={13}
+          />
+        </Map>
+      </View>
+      <Text style={styles.mapCaption}>
+        Turf.js GeoJSON example: sample trail length is {sampleTrailLengthKm} km.
+      </Text>
+    </>
   );
 }
 
 async function requestApi(path, options = {}, user = null) {
-  const token = user ? await getIdToken(user) : null;
+  const token =
+    user && firebaseAuthModule
+      ? await firebaseAuthModule.getIdToken(user)
+      : null;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -122,10 +142,13 @@ export default function App() {
   const [sqliteTrails, setSQLiteTrails] = useState([]);
   const [sqliteError, setSQLiteError] = useState('');
 
-  useEffect(
-    () => onAuthStateChanged(firebaseAuth, setUser),
-    [],
-  );
+  useEffect(() => {
+    if (!firebaseAuthModule || !firebaseAuth) {
+      return undefined;
+    }
+
+    return firebaseAuthModule.onAuthStateChanged(firebaseAuth, setUser);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -163,13 +186,29 @@ export default function App() {
 
     setIsSubmitting(true);
     try {
+      if (!firebaseAuthModule || !firebaseAuth) {
+        throw new Error('Firebase authentication is disabled for this build.');
+      }
+
       if (isCreatingAccount) {
-        await createUserWithEmailAndPassword(firebaseAuth, trimmedEmail, password);
+        await firebaseAuthModule.createUserWithEmailAndPassword(
+          firebaseAuth,
+          trimmedEmail,
+          password,
+        );
       } else {
-        await signInWithEmailAndPassword(firebaseAuth, trimmedEmail, password);
+        await firebaseAuthModule.signInWithEmailAndPassword(
+          firebaseAuth,
+          trimmedEmail,
+          password,
+        );
       }
     } catch (error) {
-      setErrorMessage(getAuthErrorMessage(error?.code));
+      setErrorMessage(
+        error?.code
+          ? getAuthErrorMessage(error.code)
+          : error.message,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -178,7 +217,11 @@ export default function App() {
   async function handleSignOut() {
     setErrorMessage('');
     try {
-      await signOut(firebaseAuth);
+      if (!firebaseAuthModule || !firebaseAuth) {
+        throw new Error('Firebase authentication is disabled for this build.');
+      }
+
+      await firebaseAuthModule.signOut(firebaseAuth);
     } catch {
       setErrorMessage('Could not sign out. Please try again.');
     }
@@ -383,80 +426,93 @@ export default function App() {
           <View style={styles.content}>
             <Text style={styles.brand}>TEANECK CREEK CONSERVANCY</Text>
             <Text style={styles.title}>
-              {isCreatingAccount ? 'Create your account' : 'Welcome back'}
+              {firebaseAuthEnabled
+                ? isCreatingAccount
+                  ? 'Create your account'
+                  : 'Welcome back'
+                : 'Explore Teaneck Creek'}
             </Text>
             <Text style={styles.subtitle}>
-              {isCreatingAccount
-                ? 'Sign up to continue.'
-                : 'Sign in to continue to your account.'}
+              {firebaseAuthEnabled
+                ? isCreatingAccount
+                  ? 'Sign up to continue.'
+                  : 'Sign in to continue to your account.'
+                : 'Firebase authentication is disabled for this simulator build. The map and read-only trail samples remain available.'}
             </Text>
             <Text style={styles.sectionTitle}>Explore Teaneck Creek</Text>
             <TrailMap />
 
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor="#7B8A7F"
-              returnKeyType="next"
-              style={styles.input}
-              value={email}
-            />
+            {firebaseAuthEnabled ? (
+              <>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  placeholderTextColor="#7B8A7F"
+                  returnKeyType="next"
+                  style={styles.input}
+                  value={email}
+                />
 
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              autoCapitalize="none"
-              autoComplete={isCreatingAccount ? 'new-password' : 'password'}
-              onChangeText={setPassword}
-              onSubmitEditing={handleSubmit}
-              placeholder="Enter your password"
-              placeholderTextColor="#7B8A7F"
-              returnKeyType="done"
-              secureTextEntry
-              style={styles.input}
-              value={password}
-            />
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  autoCapitalize="none"
+                  autoComplete={isCreatingAccount ? 'new-password' : 'password'}
+                  onChangeText={setPassword}
+                  onSubmitEditing={handleSubmit}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#7B8A7F"
+                  returnKeyType="done"
+                  secureTextEntry
+                  style={styles.input}
+                  value={password}
+                />
 
-            {errorMessage ? (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {errorMessage}
-              </Text>
+                {errorMessage ? (
+                  <Text accessibilityRole="alert" style={styles.error}>
+                    {errorMessage}
+                  </Text>
+                ) : null}
+
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={isSubmitting}
+                  onPress={handleSubmit}
+                  style={[
+                    styles.primaryButton,
+                    isSubmitting && styles.disabledButton,
+                  ]}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>
+                      {isCreatingAccount ? 'Create account' : 'Sign in'}
+                    </Text>
+                  )}
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={isSubmitting}
+                  onPress={() => {
+                    setIsCreatingAccount((current) => !current);
+                    setErrorMessage('');
+                  }}
+                  style={styles.modeButton}
+                >
+                  <Text style={styles.modeButtonText}>
+                    {isCreatingAccount
+                      ? 'Already have an account? Sign in'
+                      : 'New here? Create an account'}
+                  </Text>
+                </Pressable>
+              </>
             ) : null}
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={isSubmitting}
-              onPress={handleSubmit}
-              style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryButtonText}>
-                  {isCreatingAccount ? 'Create account' : 'Sign in'}
-                </Text>
-              )}
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={isSubmitting}
-              onPress={() => {
-                setIsCreatingAccount((current) => !current);
-                setErrorMessage('');
-              }}
-              style={styles.modeButton}
-            >
-              <Text style={styles.modeButtonText}>
-                {isCreatingAccount
-                  ? 'Already have an account? Sign in'
-                  : 'New here? Create an account'}
-              </Text>
-            </Pressable>
 
             <View style={styles.showcase}>
               <Text style={styles.sectionTitle}>Explore the database</Text>
@@ -610,8 +666,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     height: 280,
-    marginBottom: 18,
     overflow: 'hidden',
+  },
+  mapCaption: {
+    color: '#53665A',
+    fontSize: 14,
+    marginBottom: 18,
+    marginTop: 8,
   },
   emptyState: {
     color: '#53665A',

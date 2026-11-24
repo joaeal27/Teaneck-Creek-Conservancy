@@ -1,6 +1,7 @@
 {
   "name": "Teaneck Creek Conservancy",
   "version": "1.0.0",
+  "main": "index.js",
   "scripts": {},
   "dependencies": {
     "@maplibre/maplibre-react-native": "^11.5.1",
@@ -10,7 +11,16 @@
     "expo-build-properties": "~58.0.12",
     "expo-image-picker": "^58.0.10",
     "expo-sqlite": "~58.0.18",
+    "@turf/length": "^7.4.0",
     "react": "19.3.0",
     "react-native": "0.88.1"
+  },
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "@react-native-firebase/app",
+        "@react-native-firebase/auth"
+      ]
+    }
   }
 }

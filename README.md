@@ -24,7 +24,9 @@ MapLibre React Native is installed for map views. After changing native dependen
 - iOS: `npx expo run:ios`
 - Android: `npx expo run:android`
 
+The map includes a read-only Turf.js example that measures a sample GeoJSON trail line. Prisma is already integrated in `backend/` and manages the PostgreSQL trail records; this example does not change or save trail data.
+
 Use `supabase status` to see the local service URLs and keys. Keep service-role keys on the backend; never put them in Expo `EXPO_PUBLIC_*` variables. The signed-in trail form reads and writes trail records through the API; adding a photo additionally requires the private Storage bucket and S3 credentials.
 If you run `supabase db reset`, re-run `cd backend && npm run db:migrate:deploy` to restore the Prisma-managed trail table.
 
-The login screen has a public, read-only PostgreSQL trail showcase and a local SQLite showcase, both available without Firebase sign-in. The SQLite button creates a local database, seeds two example trails once, and reads them from the device so they remain available offline. Trail creation still requires a valid Firebase ID token; the API verifies it before writing. Only publish trail names and descriptions that are intended to be public. For a database that already has tables, update `backend/prisma/schema.prisma` to match them before running a migration.
+For a Firebase-free simulator preview, leave `EXPO_PUBLIC_FIREBASE_ENABLED` unset or set it to `false`. The app shows the map and read-only PostgreSQL/SQLite showcases; account sign-in and trail creation are unavailable. The mobile Firebase packages remain installed but are excluded from native autolinking. To restore mobile authentication, remove that exclusion, restore the Firebase app/auth config plugins and native service files, then set `EXPO_PUBLIC_FIREBASE_ENABLED=true`. The backend still requires a valid Firebase ID token for trail writes. Only publish trail names and descriptions that are intended to be public. For a database that already has tables, update `backend/prisma/schema.prisma` to match them before running a migration.

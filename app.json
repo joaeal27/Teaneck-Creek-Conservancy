@@ -3,12 +3,9 @@
     "package": "com.anonymous.teaneckcreekconservancy"
   },
   "ios": {
-    "bundleIdentifier": "com.tcc.teaneckcreekconservancy",
-    "googleServicesFile": "./GoogleService-Info.plist"
+    "bundleIdentifier": "com.tcc.teaneckcreekconservancy"
   },
   "plugins": [
-    "@react-native-firebase/app",
-    "@react-native-firebase/auth",
     "expo-sqlite",
     "expo-image-picker",
     "@maplibre/maplibre-react-native",
